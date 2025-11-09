@@ -15,12 +15,18 @@ function buildBearerHeader(rawKey) {
 }
 
 exports.handler = async (event, context) => {
-  // CORS
+  // CORS (versão debug - aceita localhost)
   const allowedOrigins = (process.env.ALLOWED_ORIGINS || '').split(',');
   const origin = event.headers.origin || event.headers.Origin || '';
   
+  // Para debug: aceitar qualquer localhost
+  let corsOrigin = '*';
+  if (origin && (origin.includes('localhost') || allowedOrigins.includes(origin))) {
+    corsOrigin = origin;
+  }
+  
   const corsHeaders = {
-    'Access-Control-Allow-Origin': allowedOrigins.includes(origin) ? origin : allowedOrigins[0] || '*',
+    'Access-Control-Allow-Origin': corsOrigin,
     'Access-Control-Allow-Headers': 'Content-Type, x-bridge-auth',
     'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
     'Access-Control-Allow-Credentials': 'true',
