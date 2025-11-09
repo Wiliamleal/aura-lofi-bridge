@@ -11,14 +11,30 @@ const buildBearerHeader = (key) => {
   return `Bearer ${withoutBearer}`;
 };
 
+// Helper para headers de CORS
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Access-Control-Allow-Methods": "POST, OPTIONS"
+};
+
 exports.handler = async function(event, context) {
+  // CORS preflight
+  if (event.httpMethod === "OPTIONS") {
+    return {
+      statusCode: 200,
+      headers: corsHeaders,
+      body: ""
+    };
+  }
+
   if (event.httpMethod !== "POST") {
     return {
       statusCode: 405,
+      headers: corsHeaders,
       body: JSON.stringify({ error: "Method Not Allowed" })
     };
   }
-}
 
   // Parse body
   let parsedBody;
@@ -27,6 +43,7 @@ exports.handler = async function(event, context) {
   } catch (e) {
     return {
       statusCode: 400,
+      headers: corsHeaders,
       body: JSON.stringify({ error: "Invalid JSON" })
     };
   }
@@ -37,12 +54,14 @@ exports.handler = async function(event, context) {
   if (!image_base64) {
     return {
       statusCode: 400,
+      headers: corsHeaders,
       body: JSON.stringify({ error: "Parâmetro 'image_base64' é obrigatório." })
     };
   }
   if (!ext) {
     return {
       statusCode: 400,
+      headers: corsHeaders,
       body: JSON.stringify({ error: "Parâmetro 'ext' (extensão da imagem) é obrigatório." })
     };
   }
@@ -51,6 +70,7 @@ exports.handler = async function(event, context) {
   if (!LEONARDO_API_KEY) {
     return {
       statusCode: 500,
+      headers: corsHeaders,
       body: JSON.stringify({ error: "API Key do Leonardo não configurada no servidor." })
     };
   }
@@ -62,6 +82,7 @@ exports.handler = async function(event, context) {
   } catch (error) {
     return {
       statusCode: 400,
+      headers: corsHeaders,
       body: JSON.stringify({ error: "Falha ao decodificar image_base64. Verifique o formato." })
     };
   }
@@ -93,6 +114,7 @@ exports.handler = async function(event, context) {
   } catch (error) {
     return {
       statusCode: 500,
+      headers: corsHeaders,
       body: JSON.stringify({ error: "Falha na inicialização do upload da Leonardo.", details: error.response?.data || error.message })
     };
   }
@@ -118,6 +140,7 @@ exports.handler = async function(event, context) {
   } catch (error) {
     return {
       statusCode: 500,
+      headers: corsHeaders,
       body: JSON.stringify({ error: "Falha no upload multipart para S3.", details: error.message })
     };
   }
@@ -150,6 +173,7 @@ exports.handler = async function(event, context) {
     if (!generationId) {
       return {
         statusCode: 500,
+        headers: corsHeaders,
         body: JSON.stringify({ error: "Leonardo não retornou generationId", response: videoResponse.data })
       };
     }
@@ -158,6 +182,7 @@ exports.handler = async function(event, context) {
                          videoResponse.data?.apiCreditCost;
     return {
       statusCode: 200,
+      headers: corsHeaders,
       body: JSON.stringify({
         success: true,
         generationId: generationId,
@@ -170,6 +195,8 @@ exports.handler = async function(event, context) {
   } catch (error) {
     return {
       statusCode: 500,
+      headers: corsHeaders,
       body: JSON.stringify({ error: "Falha ao iniciar a geração de vídeo.", details: error.response?.data || error.message, imageId: imageId })
     };
   }
+};

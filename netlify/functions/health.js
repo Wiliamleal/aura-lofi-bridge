@@ -19,6 +19,14 @@ exports.handler = async (event, context) => {
     };
   }
 
+  if (event.httpMethod !== 'GET' && event.httpMethod !== 'POST') {
+    return {
+      statusCode: 405,
+      headers: corsHeaders,
+      body: JSON.stringify({ error: 'Method not allowed', method: event.httpMethod })
+    };
+  }
+
   try {
     return {
       statusCode: 200,
@@ -31,7 +39,8 @@ exports.handler = async (event, context) => {
           hasLeonardoKey: !!process.env.LEONARDO_API_KEY,
           hasBridgeKey: !!process.env.BRIDGE_SECRET_KEY,
           hasAllowedOrigins: !!process.env.ALLOWED_ORIGINS
-        }
+        },
+        method: event.httpMethod
       })
     };
   } catch (error) {
@@ -40,7 +49,8 @@ exports.handler = async (event, context) => {
       headers: corsHeaders,
       body: JSON.stringify({
         status: 'error',
-        message: error.message
+        message: error.message,
+        stack: error.stack
       })
     };
   }

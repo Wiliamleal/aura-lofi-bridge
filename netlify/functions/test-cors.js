@@ -16,12 +16,11 @@ exports.handler = async (event, context) => {
     };
   }
 
-  // Verificar se é POST
-  if (event.httpMethod !== 'POST') {
+  if (event.httpMethod !== 'GET' && event.httpMethod !== 'POST') {
     return {
       statusCode: 405,
       headers,
-      body: JSON.stringify({ error: 'Method not allowed' })
+      body: JSON.stringify({ error: 'Method not allowed', method: event.httpMethod })
     };
   }
 
@@ -32,14 +31,15 @@ exports.handler = async (event, context) => {
       body: JSON.stringify({ 
         message: 'Teste de CORS - Requisição recebida com sucesso!',
         origin: event.headers.origin || 'Não informado',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        method: event.httpMethod
       })
     };
   } catch (error) {
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ error: 'Internal server error' })
+      body: JSON.stringify({ error: 'Internal server error', stack: error.stack })
     };
   }
 };
