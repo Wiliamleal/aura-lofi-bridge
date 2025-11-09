@@ -53,7 +53,7 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // Recebe o generationId
+    // Recebe o generationId de qualquer método (GET: query, POST: body)
     let generationId = null;
     if (event.httpMethod === 'GET') {
       generationId = (event.queryStringParameters || {}).generationId;
@@ -61,6 +61,10 @@ exports.handler = async (event, context) => {
       try {
         const body = JSON.parse(event.body || '{}');
         generationId = body.generationId;
+        // fallback: se não veio no body, tenta pegar da query
+        if (!generationId) {
+          generationId = (event.queryStringParameters || {}).generationId;
+        }
       } catch (e) {
         return {
           statusCode: 400,
@@ -68,6 +72,10 @@ exports.handler = async (event, context) => {
           body: JSON.stringify({ error: 'Invalid JSON', details: e.message })
         };
       }
+    }
+    // fallback final: tenta pegar da query mesmo se não for GET/POST
+    if (!generationId) {
+      generationId = (event.queryStringParameters || {}).generationId;
     }
     if (!generationId) {
       return {
