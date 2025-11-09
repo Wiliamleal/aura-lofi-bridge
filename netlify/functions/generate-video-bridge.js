@@ -126,7 +126,7 @@ exports.handler = async (event, context) => {
   // Aceitar motionStrength se vier, senão usar 5
   const motionStrength = typeof parsedBody.motionStrength === 'number' ? parsedBody.motionStrength : 5;
   // Prompt obrigatório para API Leonardo
-  const prompt = parsedBody.prompt || "video";
+  // MOTION2 não exige prompt
 
     if (!image_base64 || !ext) {
       return {
@@ -188,11 +188,10 @@ exports.handler = async (event, context) => {
     // ===== PASSO 3: Gerar Vídeo com VEO3 =====
     const videoPayload = {
       imageId: imageId,
-      isPublic: false,
-      resolution: "RESOLUTION_1080",
-      model: "VEO3",
-      prompt: prompt,
-      imageType: "GENERATED"
+      imageType: "UPLOADED",
+      endFrameImage: { type: "UPLOADED" },
+      model: "MOTION2",
+      resolution: "RESOLUTION_1080"
     };
 
     console.log('🎬 Iniciando geração de vídeo VEO3...');
