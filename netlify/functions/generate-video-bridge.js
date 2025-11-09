@@ -123,8 +123,10 @@ exports.handler = async (event, context) => {
     }
     const image_base64 = parsedBody.image_base64;
     const ext = parsedBody.ext;
-    // Aceitar motionStrength se vier, senão usar 5
-    const motionStrength = typeof parsedBody.motionStrength === 'number' ? parsedBody.motionStrength : 5;
+  // Aceitar motionStrength se vier, senão usar 5
+  const motionStrength = typeof parsedBody.motionStrength === 'number' ? parsedBody.motionStrength : 5;
+  // Prompt obrigatório para API Leonardo
+  const prompt = parsedBody.prompt || "video";
 
     if (!image_base64 || !ext) {
       return {
@@ -188,7 +190,8 @@ exports.handler = async (event, context) => {
       imageId: imageId,
       isPublic: false,
       resolution: "RESOLUTION_1080",
-      model: "VEO3"
+      model: "VEO3",
+      prompt: prompt
     };
 
     console.log('🎬 Iniciando geração de vídeo VEO3...');
