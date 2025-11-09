@@ -101,10 +101,17 @@ exports.handler = async (event, context) => {
     let status = generation?.status || 'processing';
     let videoUrl = null;
     if (generation?.generated_images?.length > 0) {
-      videoUrl = generation.generated_images[0].url;
-      if (!videoUrl && generation.generated_images[0].motionMP4URL) videoUrl = generation.generated_images[0].motionMP4URL;
-      if (!videoUrl && generation.generated_images[0].video_url) videoUrl = generation.generated_images[0].video_url;
-      if (!videoUrl && generation.generated_images[0].output_url) videoUrl = generation.generated_images[0].output_url;
+      // Prioriza motionMP4URL (vídeo)
+      if (generation.generated_images[0].motionMP4URL) {
+        videoUrl = generation.generated_images[0].motionMP4URL;
+      } else if (generation.generated_images[0].video_url) {
+        videoUrl = generation.generated_images[0].video_url;
+      } else if (generation.generated_images[0].output_url && generation.generated_images[0].output_url.endsWith('.mp4')) {
+        videoUrl = generation.generated_images[0].output_url;
+      } else {
+        // Não retorna imagem como videoUrl
+        videoUrl = null;
+      }
     }
     if (videoUrl) {
       status = 'completed';
