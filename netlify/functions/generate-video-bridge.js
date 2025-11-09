@@ -11,11 +11,13 @@ const buildBearerHeader = (key) => {
   return `Bearer ${withoutBearer}`;
 };
 
-// Helper para headers de CORS
+
+// Helper para headers de CORS (inclui x-bridge-auth)
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-  "Access-Control-Allow-Methods": "POST, OPTIONS"
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, x-bridge-auth",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Content-Type": "application/json"
 };
 
 exports.handler = async function(event, context) {
@@ -36,11 +38,27 @@ exports.handler = async function(event, context) {
     };
   }
 
+  // Log início da requisição
+  console.log("[generate-video-bridge] Nova requisição recebida");
+
+  // Autenticação opcional (x-bridge-auth)
+  const BRIDGE_SECRET_KEY = process.env.BRIDGE_SECRET_KEY;
+  const authHeader = event.headers['x-bridge-auth'] || event.headers['X-Bridge-Auth'];
+  if (BRIDGE_SECRET_KEY && (!authHeader || authHeader !== BRIDGE_SECRET_KEY)) {
+    console.warn('[generate-video-bridge] Token inválido ou ausente:', authHeader);
+    return {
+      statusCode: 401,
+      headers: corsHeaders,
+      body: JSON.stringify({ error: 'Não autorizado. Token inválido ou ausente.' })
+    };
+  }
+
   // Parse body
   let parsedBody;
   try {
     parsedBody = JSON.parse(event.body);
   } catch (e) {
+    console.warn('[generate-video-bridge] JSON inválido:', e.message);
     return {
       statusCode: 400,
       headers: corsHeaders,
@@ -52,6 +70,7 @@ exports.handler = async function(event, context) {
   const { image_base64, ext, prompt, motionStrength } = parsedBody;
 
   if (!image_base64) {
+    console.warn('[generate-video-bridge] Parâmetro image_base64 ausente');
     return {
       statusCode: 400,
       headers: corsHeaders,
@@ -59,6 +78,7 @@ exports.handler = async function(event, context) {
     };
   }
   if (!ext) {
+    console.warn('[generate-video-bridge] Parâmetro ext ausente');
     return {
       statusCode: 400,
       headers: corsHeaders,
@@ -68,6 +88,7 @@ exports.handler = async function(event, context) {
 
   const LEONARDO_API_KEY = process.env.LEONARDO_API_KEY;
   if (!LEONARDO_API_KEY) {
+    console.error('[generate-video-bridge] API Key do Leonardo não configurada');
     return {
       statusCode: 500,
       headers: corsHeaders,
@@ -79,7 +100,9 @@ exports.handler = async function(event, context) {
   let imageBuffer;
   try {
     imageBuffer = Buffer.from(image_base64, 'base64');
+    console.log(`[generate-video-bridge] Buffer criado: ${imageBuffer.length} bytes`);
   } catch (error) {
+    console.warn('[generate-video-bridge] Falha ao decodificar image_base64:', error.message);
     return {
       statusCode: 400,
       headers: corsHeaders,
@@ -109,9 +132,12 @@ exports.handler = async function(event, context) {
     uploadTargetUrl = initResponse.data.uploadInitImage?.url;
     uploadFields = initResponse.data.uploadInitImage?.fields;
     if (!imageId || !uploadTargetUrl || !uploadFields) {
+      console.error('[generate-video-bridge] Resposta inválida do init-image:', initResponse.data);
       throw new Error('Resposta inválida do init-image');
     }
+    console.log(`[generate-video-bridge] Init upload bem sucedido. ImageId: ${imageId}`);
   } catch (error) {
+    console.error('[generate-video-bridge] Falha na inicialização do upload da Leonardo:', error.response?.data || error.message);
     return {
       statusCode: 500,
       headers: corsHeaders,
@@ -137,7 +163,9 @@ exports.handler = async function(event, context) {
       maxContentLength: Infinity,
       maxBodyLength: Infinity,
     });
+    console.log(`[generate-video-bridge] Upload S3 concluído para imageId: ${imageId}`);
   } catch (error) {
+    console.error('[generate-video-bridge] Falha no upload multipart para S3:', error.message);
     return {
       statusCode: 500,
       headers: corsHeaders,
@@ -171,6 +199,7 @@ exports.handler = async function(event, context) {
       videoResponse.data?.sdGenerationJob?.generationId ||
       videoResponse.data?.generationId;
     if (!generationId) {
+      console.error('[generate-video-bridge] Leonardo não retornou generationId:', videoResponse.data);
       return {
         statusCode: 500,
         headers: corsHeaders,
@@ -180,6 +209,7 @@ exports.handler = async function(event, context) {
     const apiCreditCost = videoResponse.data?.imageToVideoMotionJob?.apiCreditCost ||
                          videoResponse.data?.motionSvdGenerationJob?.apiCreditCost ||
                          videoResponse.data?.apiCreditCost;
+    console.log(`[generate-video-bridge] Geração de vídeo iniciada com sucesso! GenerationId: ${generationId}`);
     return {
       statusCode: 200,
       headers: corsHeaders,
@@ -193,6 +223,7 @@ exports.handler = async function(event, context) {
       })
     };
   } catch (error) {
+    console.error('[generate-video-bridge] Falha ao iniciar a geração de vídeo:', error.response?.data || error.message);
     return {
       statusCode: 500,
       headers: corsHeaders,
