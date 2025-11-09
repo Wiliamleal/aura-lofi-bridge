@@ -93,6 +93,9 @@ exports.handler = async (event, context) => {
       }
     });
 
+    // LOG DETALHADO DA RESPOSTA PARA DEBUG
+    console.log('Leonardo API FULL RESPONSE:', JSON.stringify(response.data, null, 2));
+
     // Extrair status e URL do vídeo
     const generation = response.data.generations_by_pk || response.data;
     let status = generation?.status || 'processing';
