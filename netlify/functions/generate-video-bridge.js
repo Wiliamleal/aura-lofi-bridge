@@ -191,7 +191,8 @@ exports.handler = async (event, context) => {
       isPublic: false,
       resolution: "RESOLUTION_1080",
       model: "VEO3",
-      prompt: prompt
+      prompt: prompt,
+      imageType: "GENERATED"
     };
 
     console.log('🎬 Iniciando geração de vídeo VEO3...');
