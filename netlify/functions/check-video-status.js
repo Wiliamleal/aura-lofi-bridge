@@ -92,14 +92,29 @@ exports.handler = async (event, context) => {
         Authorization: buildBearerHeader(process.env.LEONARDO_API_KEY)
       }
     });
+
+    // Extrair status e URL do vídeo
+    const generation = response.data.generations_by_pk || response.data;
+    let status = generation?.status || 'processing';
+    let videoUrl = null;
+    if (generation?.generated_images?.length > 0) {
+      videoUrl = generation.generated_images[0].url;
+      if (!videoUrl && generation.generated_images[0].motionMP4URL) videoUrl = generation.generated_images[0].motionMP4URL;
+      if (!videoUrl && generation.generated_images[0].video_url) videoUrl = generation.generated_images[0].video_url;
+      if (!videoUrl && generation.generated_images[0].output_url) videoUrl = generation.generated_images[0].output_url;
+    }
+    if (videoUrl) {
+      status = 'completed';
+    }
+
     return {
       statusCode: 200,
       headers: corsHeaders,
       body: JSON.stringify({
-        status: 'ok',
-        data: response.data,
-        method: event.httpMethod,
-        timestamp: new Date().toISOString()
+        success: true,
+        status: status,
+        videoUrl: videoUrl,
+        data: generation
       })
     };
   } catch (error) {
