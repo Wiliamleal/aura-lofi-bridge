@@ -59,6 +59,14 @@ exports.handler = async (event, context) => {
     'Access-Control-Allow-Credentials': 'true',
   };
 
+  // LOG: Corpo recebido para debug
+  try {
+    const debugBody = JSON.parse(event.body || '{}');
+    console.log('🪵 [DEBUG] Corpo recebido:', debugBody);
+  } catch (e) {
+    console.log('🪵 [DEBUG] Erro ao parsear body:', e);
+  }
+
   // Handle preflight
   if (event.httpMethod === 'OPTIONS') {
     return {
@@ -107,8 +115,17 @@ exports.handler = async (event, context) => {
     }
 
     // 3. Processar requisição
-    const { image_base64, ext, motionStrength = 5 } = JSON.parse(event.body || '{}');
-    
+    let parsedBody = {};
+    try {
+      parsedBody = JSON.parse(event.body || '{}');
+    } catch (e) {
+      console.log('🪵 [DEBUG] Erro ao parsear body:', e);
+    }
+    const image_base64 = parsedBody.image_base64;
+    const ext = parsedBody.ext;
+    // Aceitar motionStrength se vier, senão usar 5
+    const motionStrength = typeof parsedBody.motionStrength === 'number' ? parsedBody.motionStrength : 5;
+
     if (!image_base64 || !ext) {
       return {
         statusCode: 400,
