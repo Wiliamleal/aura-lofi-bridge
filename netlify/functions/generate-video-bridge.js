@@ -182,8 +182,8 @@ exports.handler = async function(event, context) {
       imageType: "UPLOADED",
       endFrameImage: { type: "UPLOADED" },
       model: "MOTION2",
-      resolution: "RESOLUTION_1080",
-      motionStrength: validMotionStrength
+      resolution: "RESOLUTION_1080"
+      // motionStrength removido devido a erro na API
     };
     const videoResponse = await axios.post(videoGenUrl, videoBody, {
       headers: {
