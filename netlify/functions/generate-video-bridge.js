@@ -188,7 +188,6 @@ exports.handler = async (event, context) => {
       imageId: imageId,
       isInitImage: true,
       isPublic: false,
-      motionStrength: motionStrength,
       resolution: "RESOLUTION_1080",
       model: "VEO3"
     };
