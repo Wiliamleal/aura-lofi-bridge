@@ -173,18 +173,33 @@ exports.handler = async function(event, context) {
     };
   }
 
-  // --- PASSO 3: GERAR O VÍDEO COM MOTION2 ---
+  // --- PASSO 3: GERAR O VÍDEO ---
   try {
-    const videoGenUrl = "https://cloud.leonardo.ai/api/rest/v1/generations-image-to-video";
-    const validMotionStrength = Math.max(1, Math.min(motionStrength || 5, 10));
-    const videoBody = {
-      imageId: imageId,
-      imageType: "UPLOADED",
-      endFrameImage: { type: "UPLOADED" },
-      model: "MOTION2",
-      resolution: "RESOLUTION_1080"
-      // motionStrength removido devido a erro na API
-    };
+    let videoGenUrl, videoBody, endpointType;
+    let validMotionStrength = Math.max(1, Math.min(motionStrength || 5, 10));
+    if (prompt) {
+      // Se vier prompt, usa image-to-video
+      videoGenUrl = "https://cloud.leonardo.ai/api/rest/v1/generations-image-to-video";
+      videoBody = {
+        imageId: imageId,
+        imageType: "UPLOADED",
+        endFrameImage: { type: "UPLOADED" },
+        model: "MOTION2",
+        resolution: "RESOLUTION_1080",
+        prompt: prompt
+      };
+      endpointType = 'image-to-video';
+    } else {
+      // Se não vier prompt, usa generations-motion-svd
+      videoGenUrl = "https://cloud.leonardo.ai/api/rest/v1/generations-motion-svd";
+      videoBody = {
+        imageId: imageId,
+        isInitImage: true,
+        motionStrength: validMotionStrength
+      };
+      endpointType = 'motion-svd';
+    }
+
     const videoResponse = await axios.post(videoGenUrl, videoBody, {
       headers: {
         "Authorization": buildBearerHeader(LEONARDO_API_KEY),
@@ -192,12 +207,29 @@ exports.handler = async function(event, context) {
         "Accept": "application/json",
       },
     });
-    const generationId =
-      videoResponse.data?.imageToVideoMotionJob?.generationId ||
-      videoResponse.data?.motionSvdGenerationJob?.generationId ||
-      videoResponse.data?.motionGeneration?.id ||
-      videoResponse.data?.sdGenerationJob?.generationId ||
-      videoResponse.data?.generationId;
+
+    // Extrair o generationId de acordo com o endpoint
+    let generationId = null;
+    let apiCreditCost = null;
+    if (endpointType === 'image-to-video') {
+      generationId =
+        videoResponse.data?.imageToVideoMotionJob?.generationId ||
+        videoResponse.data?.motionSvdGenerationJob?.generationId ||
+        videoResponse.data?.motionGeneration?.id ||
+        videoResponse.data?.sdGenerationJob?.generationId ||
+        videoResponse.data?.generationId;
+      apiCreditCost = videoResponse.data?.imageToVideoMotionJob?.apiCreditCost ||
+                     videoResponse.data?.motionSvdGenerationJob?.apiCreditCost ||
+                     videoResponse.data?.apiCreditCost;
+    } else {
+      generationId =
+        videoResponse.data?.motionSvdGenerationJob?.generationId ||
+        videoResponse.data?.motionGeneration?.id ||
+        videoResponse.data?.generationId;
+      apiCreditCost = videoResponse.data?.motionSvdGenerationJob?.apiCreditCost ||
+                     videoResponse.data?.apiCreditCost;
+    }
+
     if (!generationId) {
       console.error('[generate-video-bridge] Leonardo não retornou generationId:', videoResponse.data);
       return {
@@ -206,9 +238,6 @@ exports.handler = async function(event, context) {
         body: JSON.stringify({ error: "Leonardo não retornou generationId", response: videoResponse.data })
       };
     }
-    const apiCreditCost = videoResponse.data?.imageToVideoMotionJob?.apiCreditCost ||
-                         videoResponse.data?.motionSvdGenerationJob?.apiCreditCost ||
-                         videoResponse.data?.apiCreditCost;
     console.log(`[generate-video-bridge] Geração de vídeo iniciada com sucesso! GenerationId: ${generationId}`);
     return {
       statusCode: 200,
@@ -219,7 +248,8 @@ exports.handler = async function(event, context) {
         imageId: imageId,
         apiCreditCost: apiCreditCost,
         message: "Geração de vídeo iniciada com sucesso!",
-        motionStrength: validMotionStrength
+        motionStrength: validMotionStrength,
+        endpoint: endpointType
       })
     };
   } catch (error) {
