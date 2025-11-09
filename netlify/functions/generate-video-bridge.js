@@ -186,7 +186,6 @@ exports.handler = async (event, context) => {
     // ===== PASSO 3: Gerar Vídeo com VEO3 =====
     const videoPayload = {
       imageId: imageId,
-      isInitImage: true,
       isPublic: false,
       resolution: "RESOLUTION_1080",
       model: "VEO3"
